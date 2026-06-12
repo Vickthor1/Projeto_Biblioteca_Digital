@@ -91,12 +91,25 @@
             {{-- Botão Salvar (nos resultados de pesquisa) --}}
             <form method="POST" action="{{ route('favorites.store') }}" data-disable-on-submit="true">
                 @csrf
-                <input type="hidden" name="open_library_id"  value="{{ htmlspecialchars($book['open_library_id'] ?? '', ENT_QUOTES, 'UTF-8') }}">
+                <input type="hidden" name="open_library_id" value="{{ htmlspecialchars($book['open_library_id'] ?? '', ENT_QUOTES, 'UTF-8') }}">
                 <input type="hidden" name="title"            value="{{ htmlspecialchars($book['title'] ?? '', ENT_QUOTES, 'UTF-8') }}">
-                <input type="hidden" name="author"           value="{{ htmlspecialchars($book['author'] ?? '', ENT_QUOTES, 'UTF-8') }}">
-                <input type="hidden" name="publication_year" value="{{ intval($book['publication_year'] ?? 0) ?: '' }}">
-                <input type="hidden" name="isbn"             value="{{ htmlspecialchars($book['isbn'] ?? '', ENT_QUOTES, 'UTF-8') }}">
-                <input type="hidden" name="cover_url"        value="{{ htmlspecialchars($book['cover_url'] ?? '', ENT_QUOTES, 'UTF-8') }}">
+
+                @if (!empty($book['author']))
+                    <input type="hidden" name="author" value="{{ htmlspecialchars($book['author'], ENT_QUOTES, 'UTF-8') }}">
+                @endif
+
+                @if (!empty($book['publication_year']))
+                    <input type="hidden" name="publication_year" value="{{ intval($book['publication_year']) }}">
+                @endif
+
+                @if (!empty($book['isbn']))
+                    <input type="hidden" name="isbn" value="{{ htmlspecialchars($book['isbn'], ENT_QUOTES, 'UTF-8') }}">
+                @endif
+
+                @if (!empty($book['cover_url']))
+                    <input type="hidden" name="cover_url" value="{{ htmlspecialchars($book['cover_url'], ENT_QUOTES, 'UTF-8') }}">
+                @endif
+
                 <button type="submit"
                         class="w-full py-2 px-4 text-sm font-medium rounded-lg bg-amber text-ink hover:bg-amber-dark transition-colors">
                     ❤️ Salvar na biblioteca

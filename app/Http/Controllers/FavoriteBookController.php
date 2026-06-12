@@ -86,7 +86,10 @@ class FavoriteBookController extends Controller
                 ]
             );
 
-            return back()->with('success', sprintf('"%s" foi adicionado à sua biblioteca.', $data['title']));
+            return back()->with(
+                'success',
+                sprintf('"%s" foi adicionado à sua biblioteca.', $data['title'])
+            );
         } catch (\Throwable $e) {
             Log::error('FavoriteBook save failed', [
                 'user_id' => auth()->id(),
@@ -111,7 +114,11 @@ class FavoriteBookController extends Controller
 
         try {
             $favorite->delete();
-            return back()->with('success', sprintf('"%s" foi removido da sua biblioteca.', $title));
+
+            return back()->with(
+                'success',
+                sprintf('"%s" foi removido da sua biblioteca.', $title)
+            );
         } catch (\Throwable $e) {
             Log::error('FavoriteBook delete failed', [
                 'favorite_id' => $favorite->id,
