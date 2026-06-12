@@ -1,4 +1,4 @@
-# 📚 Biblioteca Digital de Livros
+# 📚 Projeto Biblioteca Digital
 
 Sistema web em Laravel 12 para pesquisa e organização de livros favoritos,
 integrado com a Open Library API.
