@@ -47,10 +47,14 @@ class BookController extends Controller
         $result = $this->libraryService->searchByTitle($query, $page);
 
         // Coleta os IDs já favoritados pelo usuário para marcar nos cards
-        $savedIds = auth()->user()
-            ->favoriteBooks()
-            ->pluck('open_library_id')
-            ->toArray();
+        $savedIds = [];
+
+        if (auth()->check()) {
+            $savedIds = auth()->user()
+                ->favoriteBooks()
+                ->pluck('open_library_id')
+                ->toArray();
+}
 
         return view('books.results', [
             'query'       => $query,
