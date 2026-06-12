@@ -41,7 +41,7 @@
     </div>
 
     {{-- Results grid --}}
-    @if ($books->isEmpty())
+    @if (!isset($books) || $books->isEmpty())
         <div class="bg-white rounded-2xl border border-dashed border-gray-200 p-16 text-center">
             <div class="text-6xl mb-4">😔</div>
             <h2 class="font-serif text-xl font-semibold text-gray-700 mb-2">Nenhum livro encontrado</h2>
