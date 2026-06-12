@@ -6,8 +6,8 @@ integrado com a Open Library API.
 ---
 ![Início](docs/images/Inicio.png)
 ![Pesquisar](docs/images/Pesquisar.png)
-![Minha Biblioteca](docs/images/Biblioteca.png)
-![Resultado da Pesquisa](docs/images/Resultados.png)
+![Minha Biblioteca](docs/images/Minha_biblioteca.png)
+![Resultado da Pesquisa](docs/images/Resultado.png)
 ## 🧰 Requisitos
 
 | Ferramenta | Versão |
