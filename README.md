@@ -4,10 +4,22 @@ Sistema web em Laravel 12 para pesquisa e organização de livros favoritos,
 integrado com a Open Library API.
 
 ---
+## 📸 Capturas de Tela
+
+🏠 Início
 ![Início](docs/images/Inicio.png)
+
+🔍 Pesquisar
 ![Pesquisar](docs/images/Pesquisar.png)
+
+📚 Minha Biblioteca
 ![Minha Biblioteca](docs/images/Minha_biblioteca.png)
+
+📖 Resultado da Pesquisa
 ![Resultado da Pesquisa](docs/images/Resultado.png)
+
+---
+
 ## 🧰 Requisitos
 
 | Ferramenta | Versão |
