@@ -1,0 +1,107 @@
+{{--
+    Componente: book-card
+    Props:
+        $book    - array com dados do livro
+        $saved   - bool: se já está nos favoritos do usuário
+        $query   - string: termo de pesquisa atual (para paginação)
+        $showRemove - bool: exibir botão de remover (na biblioteca pessoal)
+        $favoriteId - int: ID do registro na tabela (para remover)
+--}}
+@props([
+    'book'       => [],
+    'saved'      => false,
+    'query'      => '',
+    'showRemove' => false,
+    'favoriteId' => null,
+])
+
+<div class="book-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+
+    {{-- Capa do livro --}}
+    <div class="relative bg-gray-100 h-52 flex items-center justify-center overflow-hidden">
+        @if (!empty($book['cover_url']))
+            <img src="{{ $book['cover_url'] }}"
+                 alt="Capa de {{ $book['title'] }}"
+                 class="w-full h-full object-cover"
+                 loading="lazy"
+                 onerror="this.onerror=null;this.src='{{ asset('images/no-cover.svg') }}'">
+        @else
+            {{-- Placeholder SVG quando não há capa --}}
+            <div class="flex flex-col items-center justify-center text-gray-400 p-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 mb-2 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                </svg>
+                <p class="text-xs text-center font-medium">Sem capa disponível</p>
+            </div>
+        @endif
+
+        {{-- Badge "Salvo" --}}
+        @if ($saved && !$showRemove)
+            <span class="absolute top-2 right-2 bg-forest text-white text-xs px-2 py-0.5 rounded-full font-medium shadow">
+                ✓ Salvo
+            </span>
+        @endif
+    </div>
+
+    {{-- Informações do livro --}}
+    <div class="flex-1 p-4 flex flex-col gap-1">
+        <h3 class="font-serif font-semibold text-ink text-base leading-snug line-clamp-2">
+            {{ $book['title'] }}
+        </h3>
+
+        @if (!empty($book['author']))
+            <p class="text-sm text-gray-600 line-clamp-1">
+                <span class="text-gray-400">por</span> {{ $book['author'] }}
+            </p>
+        @endif
+
+        <div class="flex flex-wrap gap-2 mt-1">
+            @if (!empty($book['publication_year']))
+                <span class="inline-flex items-center text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                    📅 {{ $book['publication_year'] }}
+                </span>
+            @endif
+            @if (!empty($book['isbn']))
+                <span class="inline-flex items-center text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded font-mono">
+                    ISBN {{ $book['isbn'] }}
+                </span>
+            @endif
+        </div>
+    </div>
+
+    {{-- Ações --}}
+    <div class="px-4 pb-4">
+        @if ($showRemove && $favoriteId)
+            {{-- Botão Remover (na biblioteca pessoal) --}}
+            <form method="POST" action="{{ route('favorites.destroy', $favoriteId) }}"
+                  onsubmit="return confirm('Remover «{{ addslashes($book['title']) }}» da sua biblioteca?')">
+                @csrf
+                @method('DELETE')
+                <button type="submit"
+                        class="w-full py-2 px-4 text-sm font-medium rounded-lg border border-red-200 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white hover:border-red-600 transition-colors">
+                    🗑️ Remover da biblioteca
+                </button>
+            </form>
+        @elseif ($saved)
+            <button disabled
+                    class="w-full py-2 px-4 text-sm font-medium rounded-lg bg-gray-100 text-gray-400 cursor-not-allowed">
+                ✓ Já está na sua biblioteca
+            </button>
+        @else
+            {{-- Botão Salvar (nos resultados de pesquisa) --}}
+            <form method="POST" action="{{ route('favorites.store') }}">
+                @csrf
+                <input type="hidden" name="open_library_id"  value="{{ $book['open_library_id'] }}">
+                <input type="hidden" name="title"            value="{{ $book['title'] }}">
+                <input type="hidden" name="author"           value="{{ $book['author'] ?? '' }}">
+                <input type="hidden" name="publication_year" value="{{ $book['publication_year'] ?? '' }}">
+                <input type="hidden" name="isbn"             value="{{ $book['isbn'] ?? '' }}">
+                <input type="hidden" name="cover_url"        value="{{ $book['cover_url'] ?? '' }}">
+                <button type="submit"
+                        class="w-full py-2 px-4 text-sm font-medium rounded-lg bg-amber text-ink hover:bg-amber-dark transition-colors">
+                    ❤️ Salvar na biblioteca
+                </button>
+            </form>
+        @endif
+    </div>
+</div>
