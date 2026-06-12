@@ -20,12 +20,12 @@ class StoreFavoriteBookRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'open_library_id'  => ['required', 'string', 'max:100'],
-            'title'            => ['required', 'string', 'max:500'],
+            'open_library_id'  => ['required', 'string', 'regex:/^\/works\/[A-Za-z0-9]+$/', 'max:100'],
+            'title'            => ['required', 'string', 'min:1', 'max:500'],
             'author'           => ['nullable', 'string', 'max:255'],
             'publication_year' => ['nullable', 'integer', 'min:1000', 'max:2100'],
-            'isbn'             => ['nullable', 'string', 'max:20'],
-            'cover_url'        => ['nullable', 'url', 'max:500'],
+            'isbn'             => ['nullable', 'string', 'regex:/^[0-9\-]+$/', 'max:20'],
+            'cover_url'        => ['nullable', 'url', 'starts_with:https://', 'max:500'],
         ];
     }
 

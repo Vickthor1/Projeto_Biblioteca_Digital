@@ -40,12 +40,33 @@
         </div>
     </div>
 
+    {{-- Error message --}}
+    @if (!empty($error))
+        <div class="bg-red-50 border border-red-200 rounded-2xl p-6 mb-8">
+            <div class="flex items-start gap-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4v2m0 0v2m0-6v-2m0 0V7a2 2 0 012-2h.5a4.5 4.5 0 100 9h-.5a2 2 0 01-2-2zm0 0V5m0 16h4m0 0h1.5a2 2 0 002-2v-5.5A1.5 1.5 0 0020.5 12h-1m0 0H9m0 0h4m0 0V7a2 2 0 012-2h.5a4.5 4.5 0 100 9h-.5a2 2 0 01-2-2z"/>
+                </svg>
+                <div>
+                    <h3 class="font-semibold text-red-900">Erro ao buscar livros</h3>
+                    <p class="text-sm text-red-700 mt-1">{{ $error }}</p>
+                </div>
+            </div>
+        </div>
+    @endif
+
     {{-- Results grid --}}
-    @if (!isset($books) || $books->isEmpty())
+    @if (!empty($error) || $books->isEmpty())
         <div class="bg-white rounded-2xl border border-dashed border-gray-200 p-16 text-center">
-            <div class="text-6xl mb-4">😔</div>
-            <h2 class="font-serif text-xl font-semibold text-gray-700 mb-2">Nenhum livro encontrado</h2>
-            <p class="text-gray-400 mb-6">Tente outros termos ou verifique a ortografia.</p>
+            @if (!empty($error))
+                <div class="text-6xl mb-4">⚠️</div>
+                <h2 class="font-serif text-xl font-semibold text-gray-700 mb-2">Erro ao buscar livros</h2>
+                <p class="text-gray-400 mb-6">{{ $error }}</p>
+            @else
+                <div class="text-6xl mb-4">😔</div>
+                <h2 class="font-serif text-xl font-semibold text-gray-700 mb-2">Nenhum livro encontrado</h2>
+                <p class="text-gray-400 mb-6">Tente outros termos ou verifique a ortografia.</p>
+            @endif
             <a href="{{ route('books.search') }}"
                class="inline-block px-6 py-2.5 bg-amber hover:bg-amber-dark text-ink font-semibold rounded-lg transition-colors">
                 ← Voltar à pesquisa

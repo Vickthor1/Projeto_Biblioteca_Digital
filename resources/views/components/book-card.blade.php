@@ -19,9 +19,9 @@
 
     {{-- Capa do livro --}}
     <div class="relative bg-gray-100 h-52 flex items-center justify-center overflow-hidden">
-        @if (!empty($book['cover_url']))
-            <img src="{{ $book['cover_url'] }}"
-                 alt="Capa de {{ $book['title'] }}"
+        @if (!empty($book['cover_url']) && is_string($book['cover_url']))
+            <img src="{{ htmlspecialchars($book['cover_url'], ENT_QUOTES, 'UTF-8') }}"
+                 alt="Capa de {{ htmlspecialchars($book['title'] ?? 'Livro', ENT_QUOTES, 'UTF-8') }}"
                  class="w-full h-full object-cover"
                  loading="lazy"
                  onerror="this.onerror=null;this.src='{{ asset('images/no-cover.svg') }}'">
@@ -46,24 +46,24 @@
     {{-- Informações do livro --}}
     <div class="flex-1 p-4 flex flex-col gap-1">
         <h3 class="font-serif font-semibold text-ink text-base leading-snug line-clamp-2">
-            {{ $book['title'] }}
+            {{ htmlspecialchars($book['title'] ?? 'Título desconhecido', ENT_QUOTES, 'UTF-8') }}
         </h3>
 
-        @if (!empty($book['author']))
+        @if (!empty($book['author']) && is_string($book['author']))
             <p class="text-sm text-gray-600 line-clamp-1">
-                <span class="text-gray-400">por</span> {{ $book['author'] }}
+                <span class="text-gray-400">por</span> {{ htmlspecialchars($book['author'], ENT_QUOTES, 'UTF-8') }}
             </p>
         @endif
 
         <div class="flex flex-wrap gap-2 mt-1">
-            @if (!empty($book['publication_year']))
+            @if (!empty($book['publication_year']) && is_numeric($book['publication_year']))
                 <span class="inline-flex items-center text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                    📅 {{ $book['publication_year'] }}
+                    📅 {{ intval($book['publication_year']) }}
                 </span>
             @endif
-            @if (!empty($book['isbn']))
+            @if (!empty($book['isbn']) && is_string($book['isbn']))
                 <span class="inline-flex items-center text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded font-mono">
-                    ISBN {{ $book['isbn'] }}
+                    ISBN {{ htmlspecialchars($book['isbn'], ENT_QUOTES, 'UTF-8') }}
                 </span>
             @endif
         </div>
@@ -73,10 +73,10 @@
     <div class="px-4 pb-4">
         @if ($showRemove && $favoriteId)
             {{-- Botão Remover (na biblioteca pessoal) --}}
-            <form method="POST" action="{{ route('favorites.destroy', $favoriteId) }}"
-                  onsubmit="return confirm('Remover «{{ addslashes($book['title']) }}» da sua biblioteca?')">
+            <form method="POST" action="{{ route('favorites.destroy', $favoriteId) }}" class="delete-form">
                 @csrf
                 @method('DELETE')
+                <input type="hidden" name="confirm" value="1">
                 <button type="submit"
                         class="w-full py-2 px-4 text-sm font-medium rounded-lg border border-red-200 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white hover:border-red-600 transition-colors">
                     🗑️ Remover da biblioteca
@@ -91,12 +91,12 @@
             {{-- Botão Salvar (nos resultados de pesquisa) --}}
             <form method="POST" action="{{ route('favorites.store') }}">
                 @csrf
-                <input type="hidden" name="open_library_id"  value="{{ $book['open_library_id'] }}">
-                <input type="hidden" name="title"            value="{{ $book['title'] }}">
-                <input type="hidden" name="author"           value="{{ $book['author'] ?? '' }}">
-                <input type="hidden" name="publication_year" value="{{ $book['publication_year'] ?? '' }}">
-                <input type="hidden" name="isbn"             value="{{ $book['isbn'] ?? '' }}">
-                <input type="hidden" name="cover_url"        value="{{ $book['cover_url'] ?? '' }}">
+                <input type="hidden" name="open_library_id"  value="{{ htmlspecialchars($book['open_library_id'] ?? '', ENT_QUOTES, 'UTF-8') }}">
+                <input type="hidden" name="title"            value="{{ htmlspecialchars($book['title'] ?? '', ENT_QUOTES, 'UTF-8') }}">
+                <input type="hidden" name="author"           value="{{ htmlspecialchars($book['author'] ?? '', ENT_QUOTES, 'UTF-8') }}">
+                <input type="hidden" name="publication_year" value="{{ intval($book['publication_year'] ?? 0) ?: '' }}">
+                <input type="hidden" name="isbn"             value="{{ htmlspecialchars($book['isbn'] ?? '', ENT_QUOTES, 'UTF-8') }}">
+                <input type="hidden" name="cover_url"        value="{{ htmlspecialchars($book['cover_url'] ?? '', ENT_QUOTES, 'UTF-8') }}">
                 <button type="submit"
                         class="w-full py-2 px-4 text-sm font-medium rounded-lg bg-amber text-ink hover:bg-amber-dark transition-colors">
                     ❤️ Salvar na biblioteca
@@ -105,3 +105,17 @@
         @endif
     </div>
 </div>
+
+@push('scripts')
+<script>
+    document.querySelectorAll('.delete-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const bookTitle = this.closest('.book-card')?.querySelector('h3')?.textContent?.trim() || 'este livro';
+            if (!confirm('Tem certeza que deseja remover "' + bookTitle + '" da sua biblioteca?')) {
+                e.preventDefault();
+            }
+        });
+    });
+</script>
+@endpush
+

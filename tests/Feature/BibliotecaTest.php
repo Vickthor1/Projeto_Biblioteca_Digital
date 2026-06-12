@@ -1,175 +1,200 @@
 <?php
 
+namespace Tests\Feature;
+
 use App\Models\FavoriteBook;
 use App\Models\User;
 use App\Services\OpenLibraryService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
+use Tests\TestCase;
 
-// ─── Authentication Tests ──────────────────────────────────────────────────────
+class BibliotecaTest extends TestCase
+{
+    use RefreshDatabase;
 
-test('guests are redirected from protected routes', function () {
-    $this->get(route('dashboard'))->assertRedirect(route('login'));
-    $this->get(route('books.search'))->assertRedirect(route('login'));
-    $this->get(route('favorites.index'))->assertRedirect(route('login'));
-});
+    // ─── Authentication Tests ──────────────────────────────────────────────────────
 
-test('authenticated users can access dashboard', function () {
-    $user = User::factory()->create();
-    $this->actingAs($user)->get(route('dashboard'))->assertOk();
-});
+    public function test_guests_are_redirected_from_protected_routes(): void
+    {
+        $this->get(route('dashboard'))->assertRedirect(route('login'));
+        $this->get(route('books.search'))->assertRedirect(route('login'));
+        $this->get(route('favorites.index'))->assertRedirect(route('login'));
+    }
 
-// ─── Book Search Tests ─────────────────────────────────────────────────────────
+    public function test_authenticated_users_can_access_dashboard(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user)->get(route('dashboard'))->assertOk();
+    }
 
-test('book search page renders correctly', function () {
-    $user = User::factory()->create();
+    // ─── Book Search Tests ─────────────────────────────────────────────────────────
 
-    $this->actingAs($user)
-        ->get(route('books.search'))
-        ->assertOk()
-        ->assertSee('Pesquisar Livros');
-});
+    public function test_book_search_page_renders_correctly(): void
+    {
+        $user = User::factory()->create();
 
-test('search results page returns books from service', function () {
-    $user = User::factory()->create();
+        $this->actingAs($user)
+            ->get(route('books.search'))
+            ->assertOk()
+            ->assertSee('Pesquisar Livros');
+    }
 
-    $fakeResult = [
-        'books' => collect([[
-            'open_library_id'  => '/works/OL123W',
-            'title'            => 'Laravel for Beginners',
-            'author'           => 'John Doe',
-            'publication_year' => 2023,
-            'isbn'             => '1234567890',
-            'cover_url'        => 'https://example.com/cover.jpg',
-        ]]),
-        'total'        => 1,
-        'pages'        => 1,
-        'current_page' => 1,
-    ];
+    public function test_search_results_page_returns_books_from_service(): void
+    {
+        $user = User::factory()->create();
 
-    $this->mock(OpenLibraryService::class)
-        ->shouldReceive('searchByTitle')
-        ->once()
-        ->with('laravel', 1)
-        ->andReturn($fakeResult);
+        $fakeResult = [
+            'books' => collect([[
+                'open_library_id'  => '/works/OL123W',
+                'title'            => 'Laravel for Beginners',
+                'author'           => 'John Doe',
+                'publication_year' => 2023,
+                'isbn'             => '1234567890',
+                'cover_url'        => 'https://example.com/cover.jpg',
+            ]]),
+            'total'        => 1,
+            'pages'        => 1,
+            'current_page' => 1,
+        ];
 
-    $this->actingAs($user)
-        ->get(route('books.results', ['q' => 'laravel']))
-        ->assertOk()
-        ->assertSee('Laravel for Beginners')
-        ->assertSee('John Doe');
-});
+        $this->mock(OpenLibraryService::class)
+            ->shouldReceive('searchByTitle')
+            ->once()
+            ->with('laravel', 1)
+            ->andReturn($fakeResult);
 
-test('search query is required and must have at least 2 characters', function () {
-    $user = User::factory()->create();
+        $this->actingAs($user)
+            ->get(route('books.results', ['q' => 'laravel']))
+            ->assertOk()
+            ->assertSee('Laravel for Beginners')
+            ->assertSee('John Doe');
+    }
 
-    $this->actingAs($user)
-        ->get(route('books.results', ['q' => 'a']))
-        ->assertSessionHasErrors('q');
-});
+    public function test_search_query_is_required_and_must_have_at_least_2_characters(): void
+    {
+        $user = User::factory()->create();
 
-// ─── Favorites Tests ───────────────────────────────────────────────────────────
+        $this->actingAs($user)
+            ->get(route('books.results', ['q' => 'a']))
+            ->assertSessionHasErrors('q');
+    }
 
-test('user can save a book to favorites', function () {
-    $user = User::factory()->create();
+    // ─── Favorites Tests ───────────────────────────────────────────────────────────
 
-    $payload = [
-        'open_library_id'  => '/works/OL999W',
-        'title'            => 'Clean Code',
-        'author'           => 'Robert C. Martin',
-        'publication_year' => 2008,
-        'isbn'             => '9780132350884',
-        'cover_url'        => 'https://covers.openlibrary.org/b/isbn/9780132350884-M.jpg',
-    ];
+    public function test_user_can_save_a_book_to_favorites(): void
+    {
+        $user = User::factory()->create();
 
-    $this->actingAs($user)
-        ->post(route('favorites.store'), $payload)
-        ->assertRedirect()
-        ->assertSessionHas('success');
+        $payload = [
+            'open_library_id'  => '/works/OL999W',
+            'title'            => 'Clean Code',
+            'author'           => 'Robert C. Martin',
+            'publication_year' => 2008,
+            'isbn'             => '9780132350884',
+            'cover_url'        => 'https://covers.openlibrary.org/b/isbn/9780132350884-M.jpg',
+        ];
 
-    $this->assertDatabaseHas('favorite_books', [
-        'user_id'        => $user->id,
-        'open_library_id' => '/works/OL999W',
-        'title'          => 'Clean Code',
-    ]);
-});
+        $this->actingAs($user)
+            ->post(route('favorites.store'), $payload)
+            ->assertRedirect()
+            ->assertSessionHas('success');
 
-test('user cannot save the same book twice', function () {
-    $user = User::factory()->create();
+        $this->assertDatabaseHas('favorite_books', [
+            'user_id'        => $user->id,
+            'open_library_id' => '/works/OL999W',
+            'title'          => 'Clean Code',
+        ]);
+    }
 
-    $payload = [
-        'open_library_id'  => '/works/OL999W',
-        'title'            => 'Clean Code',
-        'author'           => 'Robert C. Martin',
-        'publication_year' => 2008,
-    ];
+    public function test_user_cannot_save_the_same_book_twice(): void
+    {
+        $user = User::factory()->create();
 
-    // First save
-    $this->actingAs($user)->post(route('favorites.store'), $payload);
+        $payload = [
+            'open_library_id'  => '/works/OL999W',
+            'title'            => 'Clean Code',
+            'author'           => 'Robert C. Martin',
+            'publication_year' => 2008,
+        ];
 
-    // Second save should not duplicate
-    $this->actingAs($user)->post(route('favorites.store'), $payload);
+        // First save
+        $this->actingAs($user)->post(route('favorites.store'), $payload);
 
-    $this->assertDatabaseCount('favorite_books', 1);
-});
+        // Second save should not duplicate
+        $this->actingAs($user)->post(route('favorites.store'), $payload);
 
-test('user can remove their own favorite', function () {
-    $user     = User::factory()->create();
-    $favorite = FavoriteBook::factory()->create(['user_id' => $user->id]);
+        $this->assertDatabaseCount('favorite_books', 1);
+    }
 
-    $this->actingAs($user)
-        ->delete(route('favorites.destroy', $favorite))
-        ->assertRedirect()
-        ->assertSessionHas('success');
+    public function test_user_can_remove_their_own_favorite(): void
+    {
+        $user     = User::factory()->create();
+        $favorite = FavoriteBook::factory()->create(['user_id' => $user->id]);
 
-    $this->assertModelMissing($favorite);
-});
+        $this->actingAs($user)
+            ->delete(route('favorites.destroy', $favorite))
+            ->assertRedirect()
+            ->assertSessionHas('success');
 
-test('user cannot delete another users favorite', function () {
-    $userA = User::factory()->create();
-    $userB = User::factory()->create();
+        $this->assertModelMissing($favorite);
+    }
 
-    $favorite = FavoriteBook::factory()->create(['user_id' => $userB->id]);
+    public function test_user_cannot_delete_another_users_favorite(): void
+    {
+        $userA = User::factory()->create();
+        $userB = User::factory()->create();
 
-    $this->actingAs($userA)
-        ->delete(route('favorites.destroy', $favorite))
-        ->assertForbidden();
+        $favorite = FavoriteBook::factory()->create(['user_id' => $userB->id]);
 
-    $this->assertModelExists($favorite);
-});
+        $this->actingAs($userA)
+            ->delete(route('favorites.destroy', $favorite))
+            ->assertForbidden();
 
-test('favorites page is paginated', function () {
-    $user = User::factory()->create();
+        $this->assertModelExists($favorite);
+    }
 
-    FavoriteBook::factory()->count(20)->create(['user_id' => $user->id]);
+    public function test_favorites_page_is_paginated(): void
+    {
+        $user = User::factory()->create();
 
-    $this->actingAs($user)
-        ->get(route('favorites.index'))
-        ->assertOk();
+        FavoriteBook::factory()->count(20)->create(['user_id' => $user->id]);
 
-    $this->assertEquals(20, $user->favoriteBooks()->count());
-});
+        $this->actingAs($user)
+            ->get(route('favorites.index'))
+            ->assertOk();
 
-test('favorites can be filtered by search term', function () {
-    $user = User::factory()->create();
+        $this->assertEquals(20, $user->favoriteBooks()->count());
+    }
 
-    FavoriteBook::factory()->create(['user_id' => $user->id, 'title' => 'Clean Code']);
-    FavoriteBook::factory()->create(['user_id' => $user->id, 'title' => 'Design Patterns']);
+    public function test_favorites_can_be_filtered_by_search_term(): void
+    {
+        $user = User::factory()->create();
 
-    $response = $this->actingAs($user)
-        ->get(route('favorites.index', ['search' => 'Clean']))
-        ->assertOk()
-        ->assertSee('Clean Code')
-        ->assertDontSee('Design Patterns');
-});
+        FavoriteBook::factory()->create(['user_id' => $user->id, 'title' => 'Clean Code']);
+        FavoriteBook::factory()->create(['user_id' => $user->id, 'title' => 'Design Patterns']);
 
-// ─── OpenLibraryService Unit Tests ────────────────────────────────────────────
+        $response = $this->actingAs($user)
+            ->get(route('favorites.index', ['search' => 'Clean']))
+            ->assertOk()
+            ->assertSee('Clean Code')
+            ->assertDontSee('Design Patterns');
+    }
 
-test('openlibraryservice returns empty result on connection failure', function () {
-    $service = new OpenLibraryService();
+    // ─── OpenLibraryService Unit Tests ────────────────────────────────────────────
 
-    // Se a API estiver offline, retorna estrutura vazia
-    $result = $service->searchByTitle('__offline_test_xyz__');
+    public function test_openlibraryservice_returns_empty_result_on_connection_failure(): void
+    {
+        $service = new OpenLibraryService();
 
-    expect($result)->toHaveKeys(['books', 'total', 'pages', 'current_page'])
-        ->and($result['books'])->toBeInstanceOf(Collection::class);
-});
+        // Se a API estiver offline, retorna estrutura vazia
+        $result = $service->searchByTitle('__offline_test_xyz__');
+
+        $this->assertArrayHasKey('books', $result);
+        $this->assertArrayHasKey('total', $result);
+        $this->assertArrayHasKey('pages', $result);
+        $this->assertArrayHasKey('current_page', $result);
+        $this->assertInstanceOf(Collection::class, $result['books']);
+    }
+}
+

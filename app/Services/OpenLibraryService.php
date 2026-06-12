@@ -70,17 +70,40 @@ class OpenLibraryService
 
             if ($response->failed()) {
                 Log::warning('OpenLibrary API returned non-2xx response', [
-                    'status' => $response->status(),
-                    'query'  => $query,
+                    'status'   => $response->status(),
+                    'query'    => $query,
+                    'page'     => $page,
+                    'response' => $response->body(),
                 ]);
                 return $this->emptyResult($page);
             }
 
             $data  = $response->json();
+            
+            // Validação de retorno
+            if (!is_array($data)) {
+                Log::warning('OpenLibrary returned invalid JSON format', [
+                    'query' => $query,
+                    'page'  => $page,
+                ]);
+                return $this->emptyResult($page);
+            }
+
             $total = $data['numFound'] ?? 0;
             $docs  = $data['docs'] ?? [];
 
-            $books = collect($docs)->map(fn (array $doc) => $this->normalize($doc));
+            if (!is_array($docs)) {
+                Log::warning('OpenLibrary docs field is not an array', [
+                    'query' => $query,
+                    'page'  => $page,
+                    'type'  => gettype($docs),
+                ]);
+                return $this->emptyResult($page);
+            }
+
+            $books = collect($docs)
+                ->filter(fn (array $doc) => !empty($doc['title']))
+                ->map(fn (array $doc) => $this->normalize($doc));
 
             return [
                 'books'        => $books,
@@ -89,10 +112,28 @@ class OpenLibraryService
                 'current_page' => $page,
             ];
         } catch (ConnectionException $e) {
-            Log::error('OpenLibrary connection failed', ['message' => $e->getMessage()]);
+            Log::error('OpenLibrary connection failed', [
+                'query'   => $query,
+                'page'    => $page,
+                'message' => $e->getMessage(),
+                'timeout' => false,
+            ]);
+            return $this->emptyResult($page);
+        } catch (\Illuminate\Http\Client\RequestTimeoutException $e) {
+            Log::error('OpenLibrary request timeout', [
+                'query'   => $query,
+                'page'    => $page,
+                'message' => $e->getMessage(),
+                'timeout' => true,
+            ]);
             return $this->emptyResult($page);
         } catch (\Throwable $e) {
-            Log::error('OpenLibrary unexpected error', ['message' => $e->getMessage()]);
+            Log::error('OpenLibrary unexpected error', [
+                'query'   => $query,
+                'page'    => $page,
+                'message' => $e->getMessage(),
+                'class'   => get_class($e),
+            ]);
             return $this->emptyResult($page);
         }
     }

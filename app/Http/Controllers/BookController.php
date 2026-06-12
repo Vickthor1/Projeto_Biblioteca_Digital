@@ -44,7 +44,25 @@ class BookController extends Controller
         $query = $request->string('q')->trim()->toString();
         $page  = (int) $request->query('page', 1);
 
-        $result = $this->libraryService->searchByTitle($query, $page);
+        try {
+            $result = $this->libraryService->searchByTitle($query, $page);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Book search failed', [
+                'query'   => $query,
+                'page'    => $page,
+                'message' => $e->getMessage(),
+            ]);
+
+            return view('books.results', [
+                'query'       => $query,
+                'books'       => collect(),
+                'total'       => 0,
+                'pages'       => 0,
+                'currentPage' => $page,
+                'savedIds'    => [],
+                'error'       => 'Não conseguimos buscar livros no momento. Tente novamente em alguns instantes.',
+            ]);
+        }
 
         // Coleta os IDs já favoritados pelo usuário para marcar nos cards
         $savedIds = [];
@@ -54,7 +72,7 @@ class BookController extends Controller
                 ->favoriteBooks()
                 ->pluck('open_library_id')
                 ->toArray();
-}
+        }
 
         return view('books.results', [
             'query'       => $query,

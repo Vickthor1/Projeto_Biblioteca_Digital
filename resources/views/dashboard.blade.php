@@ -64,7 +64,14 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 @foreach ($recentFavorites as $favorite)
                     <x-book-card
-                        :book="$favorite->toArray()"
+                        :book="[
+                            'open_library_id'  => $favorite->open_library_id,
+                            'title'            => $favorite->title,
+                            'author'           => $favorite->author,
+                            'publication_year' => $favorite->publication_year,
+                            'isbn'             => $favorite->isbn,
+                            'cover_url'        => $favorite->cover_url,
+                        ]"
                         :saved="true"
                         :showRemove="true"
                         :favoriteId="$favorite->id"
