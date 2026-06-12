@@ -21,7 +21,7 @@ integrado com a Open Library API.
 
 ```bash
 # 1. Clone o repositório
-git clone <url-do-repositorio> biblioteca-digital
+git clone https://github.com/Vickthor1/Projeto_Biblioteca_Digital biblioteca-digital
 cd biblioteca-digital
 
 # 2. Instale as dependências PHP
