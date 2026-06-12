@@ -6,6 +6,7 @@ use App\Http\Requests\StoreFavoriteBookRequest;
 use App\Models\FavoriteBook;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 /**
@@ -70,22 +71,31 @@ class FavoriteBookController extends Controller
     {
         $data = $request->validated();
 
-        // Tenta criar; ignora silenciosamente se já existir (unique constraint)
-        FavoriteBook::firstOrCreate(
-            [
-                'user_id'         => auth()->id(),
-                'open_library_id' => $data['open_library_id'],
-            ],
-            [
-                'title'            => $data['title'],
-                'author'           => $data['author'] ?? null,
-                'publication_year' => $data['publication_year'] ?? null,
-                'isbn'             => $data['isbn'] ?? null,
-                'cover_url'        => $data['cover_url'] ?? null,
-            ]
-        );
+        try {
+            FavoriteBook::firstOrCreate(
+                [
+                    'user_id'         => auth()->id(),
+                    'open_library_id' => $data['open_library_id'],
+                ],
+                [
+                    'title'            => $data['title'],
+                    'author'           => $data['author'] ?? null,
+                    'publication_year' => $data['publication_year'] ?? null,
+                    'isbn'             => $data['isbn'] ?? null,
+                    'cover_url'        => $data['cover_url'] ?? null,
+                ]
+            );
 
-        return back()->with('success', ""{$data['title']}" foi adicionado à sua biblioteca.");
+            return back()->with('success', sprintf('"%s" foi adicionado à sua biblioteca.', $data['title']));
+        } catch (\Throwable $e) {
+            Log::error('FavoriteBook save failed', [
+                'user_id' => auth()->id(),
+                'data'    => $data,
+                'error'   => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Não foi possível salvar o livro no momento. Tente novamente.');
+        }
     }
 
     /**
@@ -98,8 +108,18 @@ class FavoriteBookController extends Controller
         $this->authorize('delete', $favorite);
 
         $title = $favorite->title;
-        $favorite->delete();
 
-        return back()->with('success', ""{$title}" foi removido da sua biblioteca.");
+        try {
+            $favorite->delete();
+            return back()->with('success', sprintf('"%s" foi removido da sua biblioteca.', $title));
+        } catch (\Throwable $e) {
+            Log::error('FavoriteBook delete failed', [
+                'favorite_id' => $favorite->id,
+                'user_id'     => auth()->id(),
+                'error'       => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Não foi possível remover o livro no momento. Tente novamente.');
+        }
     }
 }

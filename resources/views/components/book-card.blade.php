@@ -73,7 +73,7 @@
     <div class="px-4 pb-4">
         @if ($showRemove && $favoriteId)
             {{-- Botão Remover (na biblioteca pessoal) --}}
-            <form method="POST" action="{{ route('favorites.destroy', $favoriteId) }}" class="delete-form">
+            <form method="POST" action="{{ route('favorites.destroy', $favoriteId) }}" class="delete-form" data-disable-on-submit="true">
                 @csrf
                 @method('DELETE')
                 <input type="hidden" name="confirm" value="1">
@@ -89,7 +89,7 @@
             </button>
         @else
             {{-- Botão Salvar (nos resultados de pesquisa) --}}
-            <form method="POST" action="{{ route('favorites.store') }}">
+            <form method="POST" action="{{ route('favorites.store') }}" data-disable-on-submit="true">
                 @csrf
                 <input type="hidden" name="open_library_id"  value="{{ htmlspecialchars($book['open_library_id'] ?? '', ENT_QUOTES, 'UTF-8') }}">
                 <input type="hidden" name="title"            value="{{ htmlspecialchars($book['title'] ?? '', ENT_QUOTES, 'UTF-8') }}">

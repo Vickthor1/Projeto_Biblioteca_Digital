@@ -23,7 +23,7 @@ class OpenLibraryServiceTest extends TestCase
     public function test_results_are_cached(): void
     {
         Http::fake([
-            'https://openlibrary.org/search.json' => Http::response([
+            'https://openlibrary.org/search.json*' => Http::response([
                 'numFound' => 1,
                 'docs'     => [[
                     'key'                 => '/works/OL123W',
@@ -48,7 +48,7 @@ class OpenLibraryServiceTest extends TestCase
     public function test_successfully_parses_valid_response(): void
     {
         Http::fake([
-            'https://openlibrary.org/search.json' => Http::response([
+            'https://openlibrary.org/search.json*' => Http::response([
                 'numFound' => 2,
                 'docs'     => [
                     [
@@ -82,7 +82,7 @@ class OpenLibraryServiceTest extends TestCase
     public function test_handles_missing_author_field(): void
     {
         Http::fake([
-            'https://openlibrary.org/search.json' => Http::response([
+            'https://openlibrary.org/search.json*' => Http::response([
                 'numFound' => 1,
                 'docs'     => [[
                     'key'                 => '/works/OL123W',
@@ -102,7 +102,7 @@ class OpenLibraryServiceTest extends TestCase
     public function test_handles_missing_isbn(): void
     {
         Http::fake([
-            'https://openlibrary.org/search.json' => Http::response([
+            'https://openlibrary.org/search.json*' => Http::response([
                 'numFound' => 1,
                 'docs'     => [[
                     'key'                 => '/works/OL123W',
@@ -123,7 +123,7 @@ class OpenLibraryServiceTest extends TestCase
     public function test_paginates_results_correctly(): void
     {
         Http::fake([
-            'https://openlibrary.org/search.json' => Http::response([
+            'https://openlibrary.org/search.json*' => Http::response([
                 'numFound' => 100,
                 'docs'     => [],
             ]),
@@ -149,24 +149,81 @@ class OpenLibraryServiceTest extends TestCase
         $this->assertArrayHasKey('total', $result);
         $this->assertEquals(0, $result['total']);
         $this->assertEmpty($result['books']);
+        $this->assertSame('Não foi possível conectar à Open Library. Tente novamente em alguns instantes.', $result['error']);
+    }
+
+    public function test_handles_timeout_as_connection_failure(): void
+    {
+        Http::fake(function () {
+            throw new \Illuminate\Http\Client\ConnectionException('cURL error 28: Operation timed out');
+        });
+
+        $result = $this->service->searchByTitle('test', 1);
+
+        $this->assertEquals(0, $result['total']);
+        $this->assertEmpty($result['books']);
+        $this->assertSame('Não foi possível conectar à Open Library. Tente novamente em alguns instantes.', $result['error']);
     }
 
     public function test_handles_non_200_response(): void
     {
         Http::fake([
-            'https://openlibrary.org/search.json' => Http::response([], 500),
+            'https://openlibrary.org/search.json*' => Http::response([], 500),
         ]);
 
         $result = $this->service->searchByTitle('test', 1);
 
         $this->assertEquals(0, $result['total']);
         $this->assertEmpty($result['books']);
+        $this->assertSame('A Open Library está temporariamente indisponível. Por favor, tente novamente mais tarde.', $result['error']);
+    }
+
+    public function test_handles_invalid_json_response(): void
+    {
+        Http::fake([
+            'https://openlibrary.org/search.json*' => Http::response('not json', 200),
+        ]);
+
+        $result = $this->service->searchByTitle('test', 1);
+
+        $this->assertEquals(0, $result['total']);
+        $this->assertEmpty($result['books']);
+        $this->assertSame('A Open Library retornou dados inesperados. Tente novamente.', $result['error']);
+    }
+
+    public function test_sends_query_parameters_to_openlibrary_api(): void
+    {
+        Http::fake(function ($request) {
+            if ($request->url() === 'https://openlibrary.org/search.json'
+                && $request['q'] === 'harry potter'
+                && $request['limit'] === 12
+                && $request['offset'] === 0) {
+                return Http::response([
+                    'numFound' => 1,
+                    'docs'     => [[
+                        'key'                => '/works/OL1W',
+                        'title'              => 'Harry Potter',
+                        'author_name'        => ['J. K. Rowling'],
+                        'first_publish_year' => 1997,
+                        'isbn'               => ['9780747532743'],
+                    ]],
+                ], 200);
+            }
+
+            return Http::response([], 500);
+        });
+
+        $result = $this->service->searchByTitle('harry potter', 1);
+
+        $this->assertEquals(1, $result['total']);
+        $this->assertCount(1, $result['books']);
+        $this->assertSame('Harry Potter', $result['books']->first()['title']);
     }
 
     public function test_filters_out_books_without_title(): void
     {
         Http::fake([
-            'https://openlibrary.org/search.json' => Http::response([
+            'https://openlibrary.org/search.json*' => Http::response([
                 'numFound' => 2,
                 'docs'     => [
                     [
@@ -207,7 +264,7 @@ class OpenLibraryServiceTest extends TestCase
     public function test_handles_empty_docs_array(): void
     {
         Http::fake([
-            'https://openlibrary.org/search.json' => Http::response([
+            'https://openlibrary.org/search.json*' => Http::response([
                 'numFound' => 0,
                 'docs'     => [],
             ]),

@@ -101,7 +101,7 @@
         {{-- Paginação Eloquent --}}
         @if ($favorites->hasPages())
             <div class="flex justify-center">
-                {{ $favorites->withQueryString()->links('vendor.pagination.tailwind') }}
+                {{ $favorites->withQueryString()->links() }}
             </div>
         @endif
     @endif

@@ -7,7 +7,7 @@
 
     {{-- Search bar (repete para refinamento) --}}
     <div class="mb-8">
-        <form method="GET" action="{{ route('books.results') }}" class="flex gap-2 max-w-2xl">
+        <form method="GET" action="{{ route('books.results') }}" class="flex gap-2 max-w-2xl" data-disable-on-submit="true">
             <div class="flex flex-1 shadow-sm rounded-xl overflow-hidden border border-gray-200 bg-white">
                 <input type="text"
                        name="q"

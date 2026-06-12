@@ -33,9 +33,17 @@ class OpenLibraryService
     {
         $cacheKey = "openlibrary:search:{$query}:page:{$page}";
 
-        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($query, $page) {
-            return $this->fetchSearch($query, $page);
-        });
+        if (Cache::has($cacheKey)) {
+            return Cache::get($cacheKey);
+        }
+
+        $result = $this->fetchSearch($query, $page);
+
+        if (empty($result['error'])) {
+            Cache::put($cacheKey, $result, self::CACHE_TTL);
+        }
+
+        return $result;
     }
 
     /**
@@ -59,6 +67,13 @@ class OpenLibraryService
     {
         $offset = ($page - 1) * self::PER_PAGE;
 
+        Log::info('OpenLibrary search request', [
+            'query'  => $query,
+            'page'   => $page,
+            'offset' => $offset,
+            'limit'  => self::PER_PAGE,
+        ]);
+
         try {
             $response = Http::timeout(10)
                 ->get(self::BASE_URL . '/search.json', [
@@ -75,21 +90,23 @@ class OpenLibraryService
                     'page'     => $page,
                     'response' => $response->body(),
                 ]);
-                return $this->emptyResult($page);
+
+                return $this->buildResult([], 0, 0, $page, 'A Open Library está temporariamente indisponível. Por favor, tente novamente mais tarde.');
             }
 
-            $data  = $response->json();
-            
-            // Validação de retorno
+            $data = $response->json();
+
             if (!is_array($data)) {
                 Log::warning('OpenLibrary returned invalid JSON format', [
                     'query' => $query,
                     'page'  => $page,
+                    'body'  => $response->body(),
                 ]);
-                return $this->emptyResult($page);
+
+                return $this->buildResult([], 0, 0, $page, 'A Open Library retornou dados inesperados. Tente novamente.');
             }
 
-            $total = $data['numFound'] ?? 0;
+            $total = (int) ($data['numFound'] ?? 0);
             $docs  = $data['docs'] ?? [];
 
             if (!is_array($docs)) {
@@ -98,35 +115,32 @@ class OpenLibraryService
                     'page'  => $page,
                     'type'  => gettype($docs),
                 ]);
-                return $this->emptyResult($page);
+
+                return $this->buildResult([], 0, 0, $page, 'A Open Library retornou dados inesperados. Tente novamente.');
             }
 
             $books = collect($docs)
-                ->filter(fn (array $doc) => !empty($doc['title']))
+                ->filter(fn ($doc) => is_array($doc) && !empty($doc['title']))
                 ->map(fn (array $doc) => $this->normalize($doc));
 
-            return [
-                'books'        => $books,
-                'total'        => $total,
-                'pages'        => (int) ceil($total / self::PER_PAGE),
-                'current_page' => $page,
-            ];
+            Log::info('OpenLibrary search response', [
+                'query'      => $query,
+                'page'       => $page,
+                'status'     => $response->status(),
+                'numFound'   => $total,
+                'docs_count' => $books->count(),
+            ]);
+
+            return $this->buildResult($books, $total, (int) ceil($total / self::PER_PAGE), $page);
         } catch (ConnectionException $e) {
             Log::error('OpenLibrary connection failed', [
                 'query'   => $query,
                 'page'    => $page,
                 'message' => $e->getMessage(),
-                'timeout' => false,
-            ]);
-            return $this->emptyResult($page);
-        } catch (\Illuminate\Http\Client\RequestTimeoutException $e) {
-            Log::error('OpenLibrary request timeout', [
-                'query'   => $query,
-                'page'    => $page,
-                'message' => $e->getMessage(),
                 'timeout' => true,
             ]);
-            return $this->emptyResult($page);
+
+            return $this->buildResult([], 0, 0, $page, 'Não foi possível conectar à Open Library. Tente novamente em alguns instantes.');
         } catch (\Throwable $e) {
             Log::error('OpenLibrary unexpected error', [
                 'query'   => $query,
@@ -134,7 +148,8 @@ class OpenLibraryService
                 'message' => $e->getMessage(),
                 'class'   => get_class($e),
             ]);
-            return $this->emptyResult($page);
+
+            return $this->buildResult([], 0, 0, $page, 'Ocorreu um erro inesperado ao buscar livros. Tente novamente.');
         }
     }
 
@@ -143,16 +158,25 @@ class OpenLibraryService
      */
     private function normalize(array $doc): array
     {
-        $isbn = $doc['isbn'][0] ?? null;
+        $isbn = null;
+        if (isset($doc['isbn']) && is_array($doc['isbn']) && isset($doc['isbn'][0])) {
+            $isbn = trim((string) $doc['isbn'][0]);
+        }
+
+        $authors = null;
+        if (!empty($doc['author_name']) && is_array($doc['author_name'])) {
+            $authors = array_filter($doc['author_name'], fn ($value) => is_string($value) && trim($value) !== '');
+            $authors = $authors ? implode(', ', array_slice($authors, 0, 2)) : null;
+        }
+
+        $title = trim((string) ($doc['title'] ?? ''));
 
         return [
-            'open_library_id'  => $doc['key'] ?? null,
-            'title'            => $doc['title'] ?? 'Título desconhecido',
-            'author'           => isset($doc['author_name'])
-                ? implode(', ', array_slice($doc['author_name'], 0, 2))
-                : null,
-            'publication_year' => $doc['first_publish_year'] ?? null,
-            'isbn'             => $isbn,
+            'open_library_id'  => trim((string) ($doc['key'] ?? '')) ?: null,
+            'title'            => $title !== '' ? $title : 'Título desconhecido',
+            'author'           => $authors,
+            'publication_year' => isset($doc['first_publish_year']) ? (int) $doc['first_publish_year'] : null,
+            'isbn'             => $isbn !== '' ? $isbn : null,
             'cover_url'        => $isbn ? $this->coverUrl($isbn) : null,
         ];
     }
@@ -160,13 +184,19 @@ class OpenLibraryService
     /**
      * Resultado vazio padronizado para uso em caso de erros.
      */
-    private function emptyResult(int $page): array
+    private function buildResult($books, int $total, int $pages, int $currentPage, ?string $error = null): array
     {
+        if (! $books instanceof Collection) {
+            $books = collect($books);
+        }
+
         return [
-            'books'        => collect(),
-            'total'        => 0,
-            'pages'        => 0,
-            'current_page' => $page,
+            'books'        => $books,
+            'total'        => $total,
+            'pages'        => max(0, $pages),
+            'current_page' => $currentPage,
+            'error'        => $error,
         ];
     }
 }
+

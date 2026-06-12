@@ -16,7 +16,7 @@
     </div>
 
     {{-- Search Form --}}
-    <form method="GET" action="{{ route('books.results') }}" class="w-full max-w-2xl">
+    <form method="GET" action="{{ route('books.results') }}" class="w-full max-w-2xl" data-disable-on-submit="true">
         @if ($errors->any())
             <div class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
                 {{ $errors->first('q') }}

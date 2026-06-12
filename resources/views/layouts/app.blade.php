@@ -153,6 +153,20 @@
             document.getElementById('flash-success')?.remove();
             document.getElementById('flash-error')?.remove();
         }, 4000);
+
+        // Prevent duplicate form submissions when JavaScript is available
+        document.addEventListener('submit', event => {
+            const form = event.target.closest('form');
+            if (!form?.dataset?.disableOnSubmit) {
+                return;
+            }
+
+            const submitButton = form.querySelector('[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        });
     </script>
 
     @stack('scripts')

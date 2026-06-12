@@ -37,12 +37,18 @@ class BookController extends Controller
     public function results(Request $request): View
     {
         $request->validate([
-            'q'    => ['required', 'string', 'min:2', 'max:100'],
+            'q'    => ['required', 'string', 'min:2', 'max:100', 'regex:/\S+/'],
             'page' => ['sometimes', 'integer', 'min:1'],
         ]);
 
-        $query = $request->string('q')->trim()->toString();
+        $query = trim((string) $request->query('q', ''));
         $page  = (int) $request->query('page', 1);
+
+        \Illuminate\Support\Facades\Log::info('Book search requested', [
+            'query' => $query,
+            'page'  => $page,
+            'url'   => $request->fullUrl(),
+        ]);
 
         try {
             $result = $this->libraryService->searchByTitle($query, $page);
@@ -64,7 +70,6 @@ class BookController extends Controller
             ]);
         }
 
-        // Coleta os IDs já favoritados pelo usuário para marcar nos cards
         $savedIds = [];
 
         if (auth()->check()) {
@@ -81,6 +86,7 @@ class BookController extends Controller
             'pages'       => $result['pages'],
             'currentPage' => $result['current_page'],
             'savedIds'    => $savedIds,
+            'error'       => $result['error'] ?? null,
         ]);
     }
 }
